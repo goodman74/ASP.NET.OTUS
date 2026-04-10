@@ -14,18 +14,18 @@ public static class HostExtensions
     public static async Task SeedDatabase(this IHost host, CancellationToken ct = default)
     {
         using var scope = host.Services.CreateScope();
-        var logger = scope.ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("SeedDatabase");
+        IServiceProvider sp = scope.ServiceProvider;
 
+        var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("SeedDatabase");
         logger.LogInformation("Starting database seed...");
+        var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
 
-        await SeedEntity(scope.ServiceProvider, SeedData.Roles, ct);
-        await SeedEntity(scope.ServiceProvider, SeedData.Preferences, ct);
-        await SeedEntity(scope.ServiceProvider, SeedData.Employees, ct);
-        await SeedEntity(scope.ServiceProvider, SeedData.Customers, ct);
-        await SeedEntity(scope.ServiceProvider, SeedData.PromoCodes, ct);
-        await SeedEntity(scope.ServiceProvider, SeedData.CustomerPromoCodes, ct);
+        await SeedEntity(sp, SeedData.Roles, unitOfWork, ct);
+        await SeedEntity(sp, SeedData.Preferences, unitOfWork, ct);
+        await SeedEntity(sp, SeedData.Employees, unitOfWork, ct);
+        await SeedEntity(sp, SeedData.Customers, unitOfWork, ct);
+        await SeedEntity(sp, SeedData.PromoCodes, unitOfWork, ct);
+        await SeedEntity(sp, SeedData.CustomerPromoCodes, unitOfWork, ct);
 
         logger.LogInformation("Database seed completed.");
     }
@@ -52,18 +52,22 @@ public static class HostExtensions
         return host;
     }
 
-    public static async Task SeedEntity<T>(
-        IServiceProvider serviceProvider,
-        IReadOnlyCollection<T> entities,
-        CancellationToken ct)
-        where T : BaseEntity
+    public static async Task SeedEntity<T>(IServiceProvider serviceProvider, IReadOnlyCollection<T> entities,
+        IUnitOfWork unitOfWork, CancellationToken ct) where T : BaseEntity
     {
         var repository = serviceProvider.GetRequiredService<IRepository<T>>();
 
-        if ((await repository.GetAll()).Count > 0)
-            return;
+        var ids = entities.Select(x => x.Id);
+        var existing = await repository.GetByRangeId(ids, ct: ct);
+
+        var existingIds = existing.Select(x => x.Id).ToHashSet();
 
         foreach (var entity in entities)
-            await repository.Add(entity, ct);
+        {
+            if (!existingIds.Contains(entity.Id))
+                repository.Add(entity);
+        }
+
+        await unitOfWork.SaveChangesAsync(ct);
     }
 }
