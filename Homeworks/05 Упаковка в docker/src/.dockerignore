@@ -1,0 +1,19 @@
+# Общие системные файлы
+.gitignore
+.idea
+.vscode
+.vs
+bin
+obj
+*.sqlite
+
+# Docker и окружение
+docker/volumes/
+docker/.env*
+docker-compose*.yml
+
+# Не тянем тесты в образ
+PromoCodeFactory.UnitTests/
+
+# Исключаем локальные publish-артефакты (если есть)
+publish/
