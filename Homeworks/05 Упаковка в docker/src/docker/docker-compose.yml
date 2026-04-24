@@ -1,0 +1,24 @@
+name: promocode-factory
+
+services:
+  promocode-factory-api:
+    build:
+      context: ..
+      dockerfile: docker/HW05.Dockerfile
+      args:
+        API_PORT_INT: ${HTTP_PORT_INT}
+    env_file:
+      - .env
+    volumes:
+      - sqlite-data:${SQL_LITE_PATH}
+    environment:
+      # перекрывает appsettings.Development.json:
+      ConnectionStrings__Default: "Filename=${SQL_LITE_PATH}/${SQL_LITE_NAME}"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ASPNETCORE_HTTP_PORTS: "${HTTP_PORT_INT}"
+    ports:
+      - "${HTTP_PORT_EXT}:${HTTP_PORT_INT}"
+
+volumes:
+  sqlite-data:
+    name: db
