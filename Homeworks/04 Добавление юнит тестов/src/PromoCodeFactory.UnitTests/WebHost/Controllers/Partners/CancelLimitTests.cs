@@ -5,6 +5,7 @@ using PromoCodeFactory.Core.Abstractions.Repositories;
 using PromoCodeFactory.Core.Domain.Administration;
 using PromoCodeFactory.Core.Domain.PromoCodeManagement;
 using PromoCodeFactory.Core.Exceptions;
+using PromoCodeFactory.UnitTests.WebHost.Controllers.Partners.Shared;
 using PromoCodeFactory.WebHost.Controllers;
 using Soenneker.Utils.AutoBogus;
 
@@ -50,7 +51,7 @@ public class CancelLimitTests
         // Arrange
         var partnerId = Guid.NewGuid();
         var limitId = Guid.NewGuid();
-        var partner = CreatePartnerWithLimit(partnerId, limitId, isActive: false);
+        var partner = PartnerCreater.CreateWithOneActiveLimit(partnerId, limitId, isActive: false);
 
         _partnersRepositoryMock
             .Setup(r => r.GetById(partnerId, true, It.IsAny<CancellationToken>()))
@@ -74,7 +75,7 @@ public class CancelLimitTests
         var partnerId = Guid.NewGuid();
         var limitId = Guid.NewGuid();
         var otherLimitId = Guid.NewGuid();
-        var partner = CreatePartnerWithLimit(partnerId, otherLimitId, isActive: true);
+        var partner = PartnerCreater.CreateWithOneActiveLimit(partnerId, otherLimitId, isActive: true);
 
         _partnersRepositoryMock
             .Setup(r => r.GetById(partnerId, true, It.IsAny<CancellationToken>()))
@@ -97,7 +98,7 @@ public class CancelLimitTests
         // Arrange
         var partnerId = Guid.NewGuid();
         var limitId = Guid.NewGuid();
-        var partner = CreatePartnerWithLimit(partnerId, limitId, isActive: true, canceledAt: DateTimeOffset.UtcNow);
+        var partner = PartnerCreater.CreateWithCanceledLimit(partnerId, limitId, isActive: true, canceledAt: DateTimeOffset.UtcNow);
 
         _partnersRepositoryMock
             .Setup(r => r.GetById(partnerId, true, It.IsAny<CancellationToken>()))
@@ -120,7 +121,7 @@ public class CancelLimitTests
         // Arrange
         var partnerId = Guid.NewGuid();
         var limitId = Guid.NewGuid();
-        var partner = CreatePartnerWithLimit(partnerId, limitId, isActive: true);
+        var partner = PartnerCreater.CreateWithOneActiveLimit(partnerId, limitId, isActive: true);
 
         _partnersRepositoryMock
             .Setup(r => r.GetById(partnerId, true, It.IsAny<CancellationToken>()))
@@ -147,7 +148,7 @@ public class CancelLimitTests
         // Arrange
         var partnerId = Guid.NewGuid();
         var limitId = Guid.NewGuid();
-        var partner = CreatePartnerWithLimit(partnerId, limitId, isActive: true);
+        var partner = PartnerCreater.CreateWithOneActiveLimit(partnerId, limitId, isActive: true);
 
         _partnersRepositoryMock
             .Setup(r => r.GetById(partnerId, true, It.IsAny<CancellationToken>()))
@@ -162,40 +163,5 @@ public class CancelLimitTests
 
         // Assert
         result.Should().BeOfType<NotFoundResult>();
-    }
-
-    private static Partner CreatePartnerWithLimit(
-        Guid partnerId,
-        Guid limitId,
-        bool isActive,
-        DateTimeOffset? canceledAt = null)
-    {
-        var role = new AutoFaker<Role>()
-            .RuleFor(r => r.Id, _ => Guid.NewGuid())
-            .Generate();
-
-        var employee = new AutoFaker<Employee>()
-            .RuleFor(e => e.Id, _ => Guid.NewGuid())
-            .RuleFor(e => e.Role, role)
-            .Generate();
-
-        var limits = new List<PartnerPromoCodeLimit>();
-        var partner = new AutoFaker<Partner>()
-            .RuleFor(p => p.Id, _ => partnerId)
-            .RuleFor(p => p.IsActive, _ => isActive)
-            .RuleFor(p => p.Manager, employee)
-            .RuleFor(p => p.PartnerLimits, limits)
-            .Generate();
-
-        var limit = new AutoFaker<PartnerPromoCodeLimit>()
-            .RuleFor(l => l.Id, _ => limitId)
-            .RuleFor(l => l.Partner, partner)
-            .RuleFor(l => l.CanceledAt, _ => canceledAt)
-            .RuleFor(l => l.CreatedAt, _ => DateTimeOffset.UtcNow.AddDays(-1))
-            .RuleFor(l => l.EndAt, _ => DateTimeOffset.UtcNow.AddDays(30))
-            .Generate();
-
-        limits.Add(limit);
-        return partner;
     }
 }
