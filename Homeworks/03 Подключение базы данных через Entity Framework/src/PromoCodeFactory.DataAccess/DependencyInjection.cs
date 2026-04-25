@@ -9,7 +9,7 @@ namespace PromoCodeFactory.DataAccess;
 
 public static class DependencyInjection
 {
-    public static void AddInMemoryDataAccess(this IServiceCollection services)
+/*    public static void AddInMemoryDataAccess(this IServiceCollection services)
     {
         services.AddSingleton<IRepository<Employee>>(_ =>
             new InMemoryRepository<Employee>(SeedData.Employees));
@@ -23,18 +23,28 @@ public static class DependencyInjection
             new InMemoryRepository<PromoCode>(SeedData.PromoCodes));
         services.AddSingleton<IRepository<CustomerPromoCode>>(_ =>
             new InMemoryRepository<CustomerPromoCode>(SeedData.CustomerPromoCodes));
-    }
+    }*/
 
-    public static void AddEfDataAccess(this IServiceCollection services)
+    public static void AddEfDataAccess(this IServiceCollection services, string contentRootPath)
     {
-        services.AddDbContext<PromoCodeFactoryDbContext>(builder =>
-                builder.UseSqlite("Filename=PromoCodeFactory.sqlite"));
+        var dbPath = Path.Combine(contentRootPath, "PromoCodeFactory.sqlite");
+        Console.WriteLine($"dbPath[{dbPath}]");
 
+        services.AddDbContext<PromoCodeFactoryDbContext>(builder =>
+                builder.UseSqlite(
+                    $"Data Source={dbPath}",
+                    // EfRepository<T> auto Include => therefore EF warns about multiple collection include
+                    // SplitQuery => fixes execution strategy for that auto Include
+                    opt => opt.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                    )
+                );
+
+        services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddScoped<IRepository<Employee>, EmployeeEfRepository>();
         services.AddScoped<IRepository<Role>, EfRepository<Role>>();
         services.AddScoped<IRepository<Customer>, CustomerEfRepository>();
         services.AddScoped<IRepository<PromoCode>, PromoCodeEfRepository>();
-        services.AddScoped<IRepository<Preference>, EfRepository<Preference>>();
+        services.AddScoped<IRepository<Preference>, PreferenceEfRepository>();
         services.AddScoped<IRepository<CustomerPromoCode>, EfRepository<CustomerPromoCode>>();
     }
 }

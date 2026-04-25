@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using System.Linq.Expressions;
 
 namespace PromoCodeFactory.DataAccess.Repositories;
-
+/*
 internal class InMemoryRepository<T> : IRepository<T> where T : BaseEntity
 {
     private readonly ConcurrentDictionary<Guid, T> _data;
@@ -77,3 +77,4 @@ internal class InMemoryRepository<T> : IRepository<T> where T : BaseEntity
         return Task.CompletedTask;
     }
 }
+*/

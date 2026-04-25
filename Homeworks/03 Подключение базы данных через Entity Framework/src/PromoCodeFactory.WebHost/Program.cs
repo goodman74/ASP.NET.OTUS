@@ -1,32 +1,42 @@
 using PromoCodeFactory.DataAccess;
 
-var builder = WebApplication.CreateBuilder();
-
-builder.Services.AddEfDataAccess();
-
-builder.Services.AddProblemDetails();
-builder.Services.AddRouting(options =>
+public class Program
 {
-    options.LowercaseUrls = true;
-});
-builder.Services.AddControllers();
+    public static async Task Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder();
 
-builder.Services.AddOpenApi(builder.Environment);
+        var services = builder.Services;
+        var environment = builder.Environment;
+        
+        services.AddEfDataAccess(environment.ContentRootPath);
 
-var app = builder.Build();
+        services.AddProblemDetails();
+        services.AddRouting(options =>
+            {
+                options.LowercaseUrls = true;
+            });
+        services.AddControllers();
 
-app.UseExceptionHandler();
 
-app.MapOpenApi();
-app.MapSwaggerUI();
+        services.AddOpenApi(environment);
 
-app.UseHttpsRedirection();
+        var app = builder.Build();
 
-app.MapControllers();
+        app.UseExceptionHandler();
 
-app.MigrateDatabase();
+        app.MapOpenApi();
+        app.MapSwaggerUI();
 
-if (app.Environment.IsDevelopment())
-    await app.SeedDatabase();
+        app.UseHttpsRedirection();
 
-app.Run();
+        app.MapControllers();
+
+        app.MigrateDatabase();
+
+        if (app.Environment.IsDevelopment())
+            await app.SeedDatabase();
+
+        app.Run();
+    }
+}

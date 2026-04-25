@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PromoCodeFactory.DataAccess.Repositories;
 using PromoCodeFactory.WebHost.Mapping;
 using PromoCodeFactory.WebHost.Models.Employees;
 
@@ -7,10 +8,8 @@ namespace PromoCodeFactory.WebHost.Controllers;
 /// <summary>
 /// Сотрудники
 /// </summary>
-public class EmployeesController(
-    IRepository<Employee> employeeRepository,
-    IRepository<Role> roleRepository
-    ) : BaseController
+public class EmployeesController(IRepository<Employee> employeeRepository, IRepository<Role> roleRepository,
+    IUnitOfWork unitOfWork) : BaseController
 {
     /// <summary>
     /// Получить данные всех сотрудников
@@ -37,7 +36,11 @@ public class EmployeesController(
         var employee = await employeeRepository.GetById(id, true, ct);
 
         if (employee is null)
-            return NotFound();
+            return NotFound(new ProblemDetails
+            {
+                Title = "GetById Employee request canceled",
+                Detail = $"Employee with Id {id} not found."
+            });
 
         return Ok(EmployeesMapper.ToEmployeeResponse(employee));
     }
@@ -48,14 +51,21 @@ public class EmployeesController(
     [HttpPost]
     [ProducesResponseType(typeof(EmployeeResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<EmployeeResponse>> Create([FromBody] EmployeeCreateRequest request, CancellationToken ct)
+    public async Task<ActionResult<EmployeeResponse>> Create([FromBody] EmployeeCreateRequest request,
+        CancellationToken ct)
     {
         var role = await roleRepository.GetById(request.RoleId, ct: ct);
+
         if (role is null)
-            return BadRequest(new ProblemDetails { Title = "Invalid role", Detail = $"Role with Id {request.RoleId} not found." });
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Create Employee request canceled",
+                Detail = $"Role with Id {request.RoleId} not found."
+            });
 
         var employee = EmployeesMapper.ToEmployee(request, role);
-        await employeeRepository.Add(employee, ct);
+        employeeRepository.Add(employee);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return CreatedAtAction(nameof(GetById), new { id = employee.Id }, employee);
     }
@@ -74,25 +84,26 @@ public class EmployeesController(
     {
         var employee = await employeeRepository.GetById(id, ct: ct);
         if (employee is null)
-            return NotFound();
+            return NotFound(new ProblemDetails
+            {
+                Title = "Update Employee request canceled",
+                Detail = $"Employee with Id {id} not found."
+            });
 
         var role = await roleRepository.GetById(request.RoleId, ct: ct);
         if (role is null)
-            return BadRequest(new ProblemDetails { Title = "Invalid role", Detail = $"Role with Id {request.RoleId} not found." });
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Update Employee request canceled",
+                Detail = $"Role with Id {request.RoleId} not found."
+            });
 
         employee.FirstName = request.FirstName;
         employee.LastName = request.LastName;
         employee.Email = request.Email;
         employee.Role = role;
 
-        try
-        {
-            await employeeRepository.Update(employee, ct);
-        }
-        catch (EntityNotFoundException)
-        {
-            return NotFound();
-        }
+        await unitOfWork.SaveChangesAsync(ct);
 
         return Ok(EmployeesMapper.ToEmployeeResponse(employee));
     }
@@ -113,7 +124,11 @@ public class EmployeesController(
         }
         catch (EntityNotFoundException)
         {
-            return NotFound();
+            return NotFound(new ProblemDetails
+            {
+                Title = "Delete Employee request canceled",
+                Detail = $"Employee with Id {id} not found."
+            });
         }
 
         return NoContent();
